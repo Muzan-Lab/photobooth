@@ -342,16 +342,29 @@ main {
     letter-spacing: 2px;
 }
 
-.modal-actions {
+.modal-actions, .modal-actions-gallery {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: 1rem;
     width: 100%;
+    margin-top: 1rem;
+}
+
+.modal-actions-gallery {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.secondary-style {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: var(--accent-color) !important;
 }
 
 @media (max-width: 600px) {
-    .modal-actions {
-        flex-direction: column;
+    .modal-actions-gallery {
+        grid-template-columns: 1fr;
     }
 }
 

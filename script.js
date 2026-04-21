@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const countdownEl = document.getElementById('countdown');
     const dots = document.querySelectorAll('.dot');
     const previewModal = document.getElementById('previewModal');
-    const resultImage = document.getElementById('resultImage');
     const frameOptions = document.querySelectorAll('.frame-option');
     const toggleCameraBtn = document.getElementById('toggleCamera');
     const modeBtns = document.querySelectorAll('.mode-btn');
@@ -34,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let timeRemaining = 0; 
     let captureTimer = 5; 
     let sessionCaptures = [];
-    let selectedForStrip = [];
+    let selectedPhotos = []; // Renamed from selectedForStrip for clarity
 
     // 1. Initialize Camera
     async function startCamera() {
@@ -203,17 +202,18 @@ document.addEventListener('DOMContentLoaded', () => {
         item.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
 
-    // 4. Selection Gallery
+    // 4. Selection Gallery (MENU HASIL FOTO)
     function showSelectionGallery() {
-        selectedForStrip = [];
+        selectedPhotos = [];
         const modalContent = previewModal.querySelector('.modal-content');
         modalContent.innerHTML = `
             <button class="close-btn" id="modalClose">&times;</button>
-            <h2 style="color: var(--accent-color); margin-bottom: 1rem;">SESSION COMPLETE</h2>
-            <p style="margin-bottom: 2rem; color: #a0a0a5;">Select 3 photos to generate a strip, or download all individually.</p>
+            <h2 style="color: var(--accent-color); margin-bottom: 0.5rem; letter-spacing: 4px;">MENU HASIL FOTO</h2>
+            <p style="margin-bottom: 1.5rem; color: #a0a0a5; font-size: 0.9rem;">Select photos to download individually, or pick exactly 3 to generate a strip.</p>
             <div class="selection-grid" id="selectionGrid"></div>
-            <div class="modal-actions">
+            <div class="modal-actions-gallery">
                 <button id="genStripBtn" class="download-btn">GENERATE STRIP (0/3)</button>
+                <button id="downloadSelectedBtn" class="primary-btn secondary-style">DOWNLOAD SELECTED (0)</button>
                 <button id="downloadAllBtn" class="secondary-btn">DOWNLOAD ALL</button>
             </div>
         `;
@@ -228,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.getElementById('downloadAllBtn').addEventListener('click', downloadAllPhotos);
+        document.getElementById('downloadSelectedBtn').addEventListener('click', downloadSelectedPhotos);
         document.getElementById('genStripBtn').addEventListener('click', generateStripFromSelected);
         document.getElementById('modalClose').addEventListener('click', () => location.reload());
         previewModal.classList.add('active');
@@ -236,25 +237,31 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleSelection(item, src) {
         if (item.classList.contains('selected')) {
             item.classList.remove('selected');
-            selectedForStrip = selectedForStrip.filter(s => s !== src);
+            selectedPhotos = selectedPhotos.filter(s => s !== src);
         } else {
-            if (selectedForStrip.length < 3) {
-                item.classList.add('selected');
-                selectedForStrip.push(src);
-            } else {
-                alert("Please select exactly 3 photos for the strip.");
-            }
+            item.classList.add('selected');
+            selectedPhotos.push(src);
         }
-        document.getElementById('genStripBtn').textContent = `GENERATE STRIP (${selectedForStrip.length}/3)`;
+        
+        const count = selectedPhotos.length;
+        document.getElementById('genStripBtn').textContent = `GENERATE STRIP (${count}/3)`;
+        document.getElementById('downloadSelectedBtn').textContent = `DOWNLOAD SELECTED (${count})`;
+        
+        // Visual cue: strip only works with 3
+        if (count === 3) {
+            document.getElementById('genStripBtn').style.opacity = '1';
+        } else {
+            document.getElementById('genStripBtn').style.opacity = '0.6';
+        }
     }
 
     async function generateStripFromSelected() {
-        if (selectedForStrip.length < 3) {
-            alert("Please select 3 photos first.");
+        if (selectedPhotos.length !== 3) {
+            alert("Please select exactly 3 photos for the strip.");
             return;
         }
 
-        const shots = await Promise.all(selectedForStrip.map(src => {
+        const shots = await Promise.all(selectedPhotos.map(src => {
             return new Promise(resolve => {
                 const img = new Image();
                 img.onload = () => resolve(img);
@@ -288,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const iconX = padding + 20;
         const iconY = 35;
         
-        // Manual rounded rect for compatibility
         const r = 12;
         ctx.save();
         ctx.beginPath();
@@ -314,13 +320,11 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#555';
         ctx.fillText('photobooth', iconX + iconSize + 15, iconY + 45);
 
-        // Photos
         for (let i = 0; i < shots.length; i++) {
             const yPos = headerH + (i * (shotSize + gap));
             ctx.drawImage(shots[i], padding, yPos, shotSize, shotSize);
         }
 
-        // Frames
         if (selectedFrame !== 'none') {
             const frameImg = new Image();
             frameImg.src = `assets/frames/${selectedFrame}.png`;
@@ -334,7 +338,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // QR
         const igUser = 'asyrafm08_';
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://www.instagram.com/${igUser}`;
         const qrImg = new Image();
@@ -357,13 +360,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalContent = previewModal.querySelector('.modal-content');
         modalContent.innerHTML = `
             <button class="close-btn" id="finalModalClose">&times;</button>
-            <h2 style="color: var(--accent-color); margin-bottom: 2rem;">YOUR MASTERPIECE</h2>
+            <h2 style="color: var(--accent-color); margin-bottom: 2rem; letter-spacing: 4px;">HASIL STRIP</h2>
             <div class="result-container">
                 <img src="${url}" alt="Final Strip">
             </div>
             <div class="modal-actions">
-                <button id="finalDownloadBtn" class="download-btn">DOWNLOAD PHOTO</button>
-                <button id="backToGalleryBtn" class="secondary-btn">BACK TO GALLERY</button>
+                <button id="finalDownloadBtn" class="download-btn">DOWNLOAD STRIP</button>
+                <button id="backToGalleryBtn" class="secondary-btn">KEMBALI KE HASIL FOTO</button>
             </div>
         `;
 
@@ -380,6 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function downloadAllPhotos() {
+        if (sessionCaptures.length === 0) return;
         sessionCaptures.forEach((src, idx) => {
             const link = document.createElement('a');
             link.download = `BestBost-Capture-${idx + 1}.png`;
@@ -388,7 +392,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Frame selection
+    function downloadSelectedPhotos() {
+        if (selectedPhotos.length === 0) {
+            alert("Please select at least one photo.");
+            return;
+        }
+        selectedPhotos.forEach((src, idx) => {
+            const link = document.createElement('a');
+            link.download = `BestBost-Selected-${idx + 1}.png`;
+            link.href = src;
+            link.click();
+        });
+    }
+
     frameOptions.forEach(option => {
         option.addEventListener('click', () => {
             selectedFrame = option.dataset.frame;
