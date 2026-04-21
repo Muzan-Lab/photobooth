@@ -176,23 +176,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function generateStrip(shots) {
-        // Strip Dimensions (Consistent 1:1 aspect ratio)
-        const stripW = 800;
-        const padding = 40;
-        const shotSize = stripW - (padding * 2); // 720
-        const totalH = (shotSize * shots.length) + (padding * (shots.length + 1)); 
+        // Strip Dimensions tuned for a premium vertical look
+        const stripW = 400;
+        const padding = 20;
+        const shotSize = stripW - (padding * 2); 
+        const headerH = 100;
+        const footerH = 180;
+        const gap = 15;
+        const totalH = headerH + (shotSize * shots.length) + (gap * (shots.length - 1)) + footerH;
         
         canvas.width = stripW;
         canvas.height = totalH;
         const ctx = canvas.getContext('2d');
 
-        // Background Color 
+        // Background Color (Pure White like the ref)
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, stripW, totalH);
 
+        // Draw Header Text
+        ctx.fillStyle = '#1a1a1a';
+        ctx.textAlign = 'center';
+        
+        // BestBost - Bold & Elegant
+        ctx.font = '800 28px Inter';
+        ctx.fillText('BestBost', stripW / 2, 45);
+        
+        // photobooth - Light & Spaced
+        ctx.font = '300 18px Inter';
+        ctx.fillText('photobooth', stripW / 2, 75);
+
         // Draw Shots
         for (let i = 0; i < shots.length; i++) {
-            const yPos = padding + (i * (shotSize + padding));
+            const yPos = headerH + (i * (shotSize + gap));
             ctx.drawImage(shots[i], padding, yPos, shotSize, shotSize);
         }
 
@@ -200,10 +215,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedFrame !== 'none') {
             const frameImg = new Image();
             frameImg.src = `assets/frames/${selectedFrame}.png`;
-            await new Promise(r => frameImg.onload = r);
+            await new Promise(r => {
+                frameImg.onload = r;
+                frameImg.onerror = () => {
+                    console.error("Failed to load frame:", selectedFrame);
+                    r(); // Continue anyway
+                }
+            });
             
             for (let i = 0; i < shots.length; i++) {
-                const yPos = padding + (i * (shotSize + padding));
+                const yPos = headerH + (i * (shotSize + gap));
                 
                 ctx.save();
                 if (selectedFrame === 'floral') {
@@ -217,11 +238,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Add Logo / Brand
-        ctx.fillStyle = '#0a0a0c';
-        ctx.font = 'bold 24px Inter';
-        ctx.textAlign = 'center';
-        ctx.fillText('GLOW BOOTH', stripW / 2, totalH - (padding / 2));
+        // Draw QR Code pointing to Instagram
+        const igUser = 'asyrafm08_';
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://www.instagram.com/${igUser}`;
+        
+        try {
+            const qrImg = new Image();
+            qrImg.crossOrigin = 'anonymous'; // Critical for canvas export
+            qrImg.src = qrUrl;
+            await new Promise((resolve, reject) => {
+                qrImg.onload = resolve;
+                qrImg.onerror = () => {
+                    console.warn("QR Code failed to load, proceeding without it.");
+                    resolve();
+                };
+            });
+            
+            if (qrImg.complete && qrImg.naturalWidth !== 0) {
+                const qrSize = 100;
+                const qrX = (stripW - qrSize) / 2;
+                const qrY = totalH - footerH + 30;
+                ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                
+                // IG Handle below QR
+                ctx.fillStyle = '#666';
+                ctx.font = '600 14px Inter';
+                ctx.fillText(`@${igUser}`, stripW / 2, qrY + qrSize + 25);
+            }
+        } catch (err) {
+            console.error("Error drawing QR code:", err);
+        }
 
         resultImage.src = canvas.toDataURL('image/png');
         previewModal.classList.add('active');
