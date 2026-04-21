@@ -5,10 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const frameOverlay = document.getElementById('frameOverlay');
     const flashEffect = document.getElementById('flashEffect');
     const countdownEl = document.getElementById('countdown');
+    const dots = document.querySelectorAll('.dot');
     const previewModal = document.getElementById('previewModal');
     const resultImage = document.getElementById('resultImage');
     const frameOptions = document.querySelectorAll('.frame-option');
     const toggleCameraBtn = document.getElementById('toggleCamera');
+    const modeBtns = document.querySelectorAll('.mode-btn');
+    const shotsIndicator = document.getElementById('shotsIndicator');
     
     // UI Elements for Photobox System
     const setupScreen = document.getElementById('setupScreen');
@@ -23,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFrame = 'none';
     let facingMode = 'user';
     let isCapturing = false;
+    let sessionMode = 'strip'; // Matches HTML default
     
     // Session State
     let sessionActive = false;
@@ -46,11 +50,26 @@ document.addEventListener('DOMContentLoaded', () => {
             video.srcObject = currentStream;
         } catch (err) {
             console.error("Error accessing camera:", err);
-            alert("Could not access camera.");
+            alert("Could not access camera. Please check permissions.");
         }
     }
 
-    // 2. Session Setup Logic
+    // 2. Mode & Setup Listeners
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (isCapturing) return;
+            modeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            sessionMode = btn.dataset.mode;
+            
+            if (sessionMode === 'single') {
+                shotsIndicator.classList.add('hidden');
+            } else {
+                shotsIndicator.classList.remove('hidden');
+            }
+        });
+    });
+
     optBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const parent = btn.parentElement;
@@ -69,8 +88,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     finishSessionBtn.addEventListener('click', () => {
-        if (confirm("Are you sure you want to finish your session?")) {
-            endSession();
+        if (sessionCaptures.length === 0) {
+            if (confirm("No photos taken yet. Finish session anyway?")) endSession();
+        } else {
+            if (confirm("Finish session and pick your photos?")) endSession();
         }
     });
 
@@ -104,11 +125,10 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(sessionInterval);
         sessionActive = false;
         isCapturing = false;
-        alert("Session Ended! Let's pick your best shots.");
         showSelectionGallery();
     }
 
-    // 3. Capture Flow
+    // 3. Capture Logic
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     async function runCountdown(duration) {
@@ -126,19 +146,31 @@ document.addEventListener('DOMContentLoaded', () => {
         isCapturing = true;
         captureBtn.disabled = true;
 
-        await runCountdown(captureTimer);
-        const shot = captureSingleFrame();
-        
-        // Add to Session Gallery
-        const dataUrl = shot.toDataURL('image/png');
-        sessionCaptures.push(dataUrl);
-        updateGalleryUI(dataUrl);
-        
-        // Flash Effect
-        flashEffect.classList.add('active');
-        setTimeout(() => flashEffect.classList.remove('active'), 500);
+        if (sessionMode === 'strip') {
+            dots.forEach(dot => dot.classList.remove('active'));
+            for (let i = 0; i < 3; i++) {
+                await runCountdown(captureTimer);
+                const shot = captureSingleFrame();
+                const dataUrl = shot.toDataURL('image/png');
+                sessionCaptures.push(dataUrl);
+                updateGalleryUI(dataUrl);
+                
+                dots[i].classList.add('active');
+                flashEffect.classList.add('active');
+                setTimeout(() => flashEffect.classList.remove('active'), 500);
+                await sleep(1000);
+            }
+        } else {
+            await runCountdown(captureTimer);
+            const shot = captureSingleFrame();
+            const dataUrl = shot.toDataURL('image/png');
+            sessionCaptures.push(dataUrl);
+            updateGalleryUI(dataUrl);
+            
+            flashEffect.classList.add('active');
+            setTimeout(() => flashEffect.classList.remove('active'), 500);
+        }
 
-        await sleep(500);
         isCapturing = false;
         captureBtn.disabled = false;
     });
@@ -168,15 +200,15 @@ document.addEventListener('DOMContentLoaded', () => {
         item.className = 'gallery-item';
         item.innerHTML = `<img src="${src}" alt="Capture">`;
         galleryInner.appendChild(item);
-        item.scrollIntoView({ behavior: 'smooth' });
+        item.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
 
-    // 4. Post-Session Selection Gallery
+    // 4. Selection Gallery
     function showSelectionGallery() {
         selectedForStrip = [];
         const modalContent = previewModal.querySelector('.modal-content');
         modalContent.innerHTML = `
-            <button class="close-btn">&times;</button>
+            <button class="close-btn" id="modalClose">&times;</button>
             <h2 style="color: var(--accent-color); margin-bottom: 1rem;">SESSION COMPLETE</h2>
             <p style="margin-bottom: 2rem; color: #a0a0a5;">Select 3 photos to generate a strip, or download all individually.</p>
             <div class="selection-grid" id="selectionGrid"></div>
@@ -187,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const grid = document.getElementById('selectionGrid');
-        sessionCaptures.forEach((src, idx) => {
+        sessionCaptures.forEach((src) => {
             const item = document.createElement('div');
             item.className = 'selection-item';
             item.innerHTML = `<img src="${src}"><div class="check">✓</div>`;
@@ -197,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('downloadAllBtn').addEventListener('click', downloadAllPhotos);
         document.getElementById('genStripBtn').addEventListener('click', generateStripFromSelected);
-        modalContent.querySelector('.close-btn').addEventListener('click', () => location.reload());
+        document.getElementById('modalClose').addEventListener('click', () => location.reload());
         previewModal.classList.add('active');
     }
 
@@ -210,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.classList.add('selected');
                 selectedForStrip.push(src);
             } else {
-                alert("You can only select 3 photos for a strip.");
+                alert("Please select exactly 3 photos for the strip.");
             }
         }
         document.getElementById('genStripBtn').textContent = `GENERATE STRIP (${selectedForStrip.length}/3)`;
@@ -250,15 +282,24 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, stripW, totalH);
 
-        // Header Branding
+        // Header
         ctx.fillStyle = '#111111';
         const iconSize = 50;
         const iconX = padding + 20;
         const iconY = 35;
+        
+        // Manual rounded rect for compatibility
+        const r = 12;
         ctx.save();
         ctx.beginPath();
-        ctx.roundRect(iconX, iconY, iconSize, iconSize, 12);
+        ctx.moveTo(iconX + r, iconY);
+        ctx.arcTo(iconX + iconSize, iconY, iconX + iconSize, iconY + iconSize, r);
+        ctx.arcTo(iconX + iconSize, iconY + iconSize, iconX, iconY + iconSize, r);
+        ctx.arcTo(iconX, iconY + iconSize, iconX, iconY, r);
+        ctx.arcTo(iconX, iconY, iconX + iconSize, iconY, r);
+        ctx.closePath();
         ctx.fill();
+        
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.font = 'bold 32px Inter';
@@ -273,13 +314,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#555';
         ctx.fillText('photobooth', iconX + iconSize + 15, iconY + 45);
 
-        // Shots
+        // Photos
         for (let i = 0; i < shots.length; i++) {
             const yPos = headerH + (i * (shotSize + gap));
             ctx.drawImage(shots[i], padding, yPos, shotSize, shotSize);
         }
 
-        // Apply Frame if selected
+        // Frames
         if (selectedFrame !== 'none') {
             const frameImg = new Image();
             frameImg.src = `assets/frames/${selectedFrame}.png`;
@@ -293,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // QR Code
+        // QR
         const igUser = 'asyrafm08_';
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://www.instagram.com/${igUser}`;
         const qrImg = new Image();
@@ -309,15 +350,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textAlign = 'center';
         ctx.fillText(`@${igUser}`, stripW / 2, qrY + qrSize + 30);
 
-        // Show Result
-        const finalUrl = stripCanvas.toDataURL('image/png');
-        showFinalResult(finalUrl);
+        showFinalResult(stripCanvas.toDataURL('image/png'));
     }
 
     function showFinalResult(url) {
         const modalContent = previewModal.querySelector('.modal-content');
         modalContent.innerHTML = `
-            <button class="close-btn">&times;</button>
+            <button class="close-btn" id="finalModalClose">&times;</button>
             <h2 style="color: var(--accent-color); margin-bottom: 2rem;">YOUR MASTERPIECE</h2>
             <div class="result-container">
                 <img src="${url}" alt="Final Strip">
@@ -336,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.getElementById('backToGalleryBtn').addEventListener('click', showSelectionGallery);
-        modalContent.querySelector('.close-btn').addEventListener('click', () => location.reload());
+        document.getElementById('finalModalClose').addEventListener('click', () => location.reload());
     }
 
     function downloadAllPhotos() {
@@ -348,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Frame selection handling
+    // Frame selection
     frameOptions.forEach(option => {
         option.addEventListener('click', () => {
             selectedFrame = option.dataset.frame;
