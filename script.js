@@ -5,22 +5,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const frameOverlay = document.getElementById('frameOverlay');
     const flashEffect = document.getElementById('flashEffect');
     const countdownEl = document.getElementById('countdown');
-    const dots = document.querySelectorAll('.dot');
     const previewModal = document.getElementById('previewModal');
     const resultImage = document.getElementById('resultImage');
-    const closeBtn = document.querySelector('.close-btn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const retakeBtn = document.getElementById('retakeBtn');
     const frameOptions = document.querySelectorAll('.frame-option');
     const toggleCameraBtn = document.getElementById('toggleCamera');
-    const modeBtns = document.querySelectorAll('.mode-btn');
-    const shotsIndicator = document.getElementById('shotsIndicator');
+    
+    // UI Elements for Photobox System
+    const setupScreen = document.getElementById('setupScreen');
+    const startSessionBtn = document.getElementById('startSessionBtn');
+    const finishSessionBtn = document.getElementById('finishSessionBtn');
+    const sessionTimerEl = document.getElementById('sessionTimer');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const galleryInner = document.getElementById('galleryInner');
+    const optBtns = document.querySelectorAll('.opt-btn');
 
     let currentStream = null;
     let selectedFrame = 'none';
     let facingMode = 'user';
     let isCapturing = false;
-    let sessionMode = 'strip'; // 'strip' or 'single'
+    
+    // Session State
+    let sessionActive = false;
+    let sessionInterval = null;
+    let timeRemaining = 0; 
+    let captureTimer = 5; 
+    let sessionCaptures = [];
+    let selectedForStrip = [];
 
     // 1. Initialize Camera
     async function startCamera() {
@@ -40,51 +50,70 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 1.5 Handle Mode Selection
-    modeBtns.forEach(btn => {
+    // 2. Session Setup Logic
+    optBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            if (isCapturing) return;
-            modeBtns.forEach(b => b.classList.remove('active'));
+            const parent = btn.parentElement;
+            parent.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            sessionMode = btn.dataset.mode;
             
-            // Show/Hide shots indicator
-            if (sessionMode === 'single') {
-                shotsIndicator.classList.add('hidden');
-            } else {
-                shotsIndicator.classList.remove('hidden');
+            if (parent.dataset.type === 'capture') {
+                captureTimer = parseInt(btn.dataset.val);
             }
         });
     });
 
-    // 2. Handle Frame Selection
-    frameOptions.forEach(option => {
-        option.addEventListener('click', () => {
-            if (isCapturing) return;
-            frameOptions.forEach(opt => opt.classList.remove('active'));
-            option.classList.add('active');
-            selectedFrame = option.dataset.frame;
-            if (selectedFrame === 'none') {
-                frameOverlay.style.backgroundImage = 'none';
-            } else {
-                frameOverlay.style.backgroundImage = `url('assets/frames/${selectedFrame}.png')`;
-                
-                // Adjust blend mode based on frame style
-                if (selectedFrame === 'floral') {
-                    frameOverlay.style.mixBlendMode = 'multiply';
-                } else {
-                    frameOverlay.style.mixBlendMode = 'screen';
-                }
-            }
-        });
+    startSessionBtn.addEventListener('click', () => {
+        const selectedDuration = parseInt(document.querySelector('.option-row[data-type="session"] .opt-btn.active').dataset.val);
+        startSession(selectedDuration);
     });
 
-    // 3. Countdown Helper
+    finishSessionBtn.addEventListener('click', () => {
+        if (confirm("Are you sure you want to finish your session?")) {
+            endSession();
+        }
+    });
+
+    function startSession(minutes) {
+        timeRemaining = minutes * 60;
+        sessionActive = true;
+        setupScreen.classList.add('hidden');
+        sessionTimerEl.classList.remove('hidden');
+        
+        updateTimerDisplay();
+        sessionInterval = setInterval(() => {
+            timeRemaining--;
+            updateTimerDisplay();
+            if (timeRemaining <= 0) {
+                endSession();
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const mins = Math.floor(timeRemaining / 60);
+        const secs = timeRemaining % 60;
+        timeLeftEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        
+        if (timeRemaining < 60) {
+            timeLeftEl.style.color = '#ff4b2b';
+        }
+    }
+
+    function endSession() {
+        clearInterval(sessionInterval);
+        sessionActive = false;
+        isCapturing = false;
+        alert("Session Ended! Let's pick your best shots.");
+        showSelectionGallery();
+    }
+
+    // 3. Capture Flow
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    async function runCountdown() {
+    async function runCountdown(duration) {
         countdownEl.classList.add('active');
-        for (let i = 3; i > 0; i--) {
+        for (let i = duration; i > 0; i--) {
             countdownEl.textContent = i;
             await sleep(1000);
         }
@@ -92,73 +121,33 @@ document.addEventListener('DOMContentLoaded', () => {
         countdownEl.textContent = '';
     }
 
-    // 4. Multi-Capture Sequence
     captureBtn.addEventListener('click', async () => {
-        if (isCapturing) return;
+        if (isCapturing || !sessionActive) return;
         isCapturing = true;
-        captureBtn.style.opacity = '0.5';
         captureBtn.disabled = true;
 
-        if (sessionMode === 'strip') {
-            const capturedShots = [];
-            dots.forEach(dot => dot.classList.remove('active'));
-
-            for (let i = 0; i < 3; i++) { // Changed from 4 to 3
-                await runCountdown();
-                const shot = captureSingleFrame();
-                capturedShots.push(shot);
-                dots[i].classList.add('active');
-                flashEffect.classList.add('active');
-                setTimeout(() => flashEffect.classList.remove('active'), 500);
-                await sleep(1000);
-            }
-            await generateStrip(capturedShots);
-        } else {
-            // Single Mode
-            await runCountdown();
-            const shot = captureSingleFrame();
-            flashEffect.classList.add('active');
-            setTimeout(() => flashEffect.classList.remove('active'), 500);
-            await generateSingle(shot);
-        }
+        await runCountdown(captureTimer);
+        const shot = captureSingleFrame();
         
+        // Add to Session Gallery
+        const dataUrl = shot.toDataURL('image/png');
+        sessionCaptures.push(dataUrl);
+        updateGalleryUI(dataUrl);
+        
+        // Flash Effect
+        flashEffect.classList.add('active');
+        setTimeout(() => flashEffect.classList.remove('active'), 500);
+
+        await sleep(500);
         isCapturing = false;
-        captureBtn.style.opacity = '1';
         captureBtn.disabled = false;
     });
-
-    async function generateSingle(shot) {
-        const size = 1080;
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-
-        // Draw Shot
-        ctx.drawImage(shot, 0, 0, size, size);
-
-        // Apply Frame if selected
-        if (selectedFrame !== 'none') {
-            const frameImg = new Image();
-            frameImg.src = `assets/frames/${selectedFrame}.png`;
-            await new Promise(r => frameImg.onload = r);
-            
-            ctx.save();
-            ctx.globalCompositeOperation = (selectedFrame === 'floral') ? 'multiply' : 'screen';
-            ctx.drawImage(frameImg, 0, 0, size, size);
-            ctx.restore();
-        }
-
-        resultImage.src = canvas.toDataURL('image/png');
-        previewModal.classList.add('active');
-    }
 
     function captureSingleFrame() {
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = 1080;
         tempCanvas.height = 1080;
         const ctx = tempCanvas.getContext('2d');
-
-        // Draw Video (Mirrored)
         ctx.save();
         ctx.translate(1080, 0);
         ctx.scale(-1, 1);
@@ -171,75 +160,130 @@ document.addEventListener('DOMContentLoaded', () => {
         
         ctx.drawImage(video, x, y, min, min, 0, 0, 1080, 1080);
         ctx.restore();
-
         return tempCanvas;
     }
 
+    function updateGalleryUI(src) {
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+        item.innerHTML = `<img src="${src}" alt="Capture">`;
+        galleryInner.appendChild(item);
+        item.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 4. Post-Session Selection Gallery
+    function showSelectionGallery() {
+        selectedForStrip = [];
+        const modalContent = previewModal.querySelector('.modal-content');
+        modalContent.innerHTML = `
+            <button class="close-btn">&times;</button>
+            <h2 style="color: var(--accent-color); margin-bottom: 1rem;">SESSION COMPLETE</h2>
+            <p style="margin-bottom: 2rem; color: #a0a0a5;">Select 3 photos to generate a strip, or download all individually.</p>
+            <div class="selection-grid" id="selectionGrid"></div>
+            <div class="modal-actions">
+                <button id="genStripBtn" class="download-btn">GENERATE STRIP (0/3)</button>
+                <button id="downloadAllBtn" class="secondary-btn">DOWNLOAD ALL</button>
+            </div>
+        `;
+
+        const grid = document.getElementById('selectionGrid');
+        sessionCaptures.forEach((src, idx) => {
+            const item = document.createElement('div');
+            item.className = 'selection-item';
+            item.innerHTML = `<img src="${src}"><div class="check">✓</div>`;
+            item.addEventListener('click', () => toggleSelection(item, src));
+            grid.appendChild(item);
+        });
+
+        document.getElementById('downloadAllBtn').addEventListener('click', downloadAllPhotos);
+        document.getElementById('genStripBtn').addEventListener('click', generateStripFromSelected);
+        modalContent.querySelector('.close-btn').addEventListener('click', () => location.reload());
+        previewModal.classList.add('active');
+    }
+
+    function toggleSelection(item, src) {
+        if (item.classList.contains('selected')) {
+            item.classList.remove('selected');
+            selectedForStrip = selectedForStrip.filter(s => s !== src);
+        } else {
+            if (selectedForStrip.length < 3) {
+                item.classList.add('selected');
+                selectedForStrip.push(src);
+            } else {
+                alert("You can only select 3 photos for a strip.");
+            }
+        }
+        document.getElementById('genStripBtn').textContent = `GENERATE STRIP (${selectedForStrip.length}/3)`;
+    }
+
+    async function generateStripFromSelected() {
+        if (selectedForStrip.length < 3) {
+            alert("Please select 3 photos first.");
+            return;
+        }
+
+        const shots = await Promise.all(selectedForStrip.map(src => {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.src = src;
+            });
+        }));
+
+        await generateStrip(shots);
+    }
+
     async function generateStrip(shots) {
-        // Strip Dimensions for a classic vertical photobooth look
         const stripW = 400;
-        const padding = 12; // Thinner padding for larger photos
+        const padding = 12;
         const shotSize = stripW - (padding * 2); 
         const headerH = 120;
         const footerH = 220;
-        const gap = 8; // Minimal gap like in professional strips
+        const gap = 8;
         const totalH = headerH + (shotSize * shots.length) + (gap * (shots.length - 1)) + footerH;
         
-        canvas.width = stripW;
-        canvas.height = totalH;
-        const ctx = canvas.getContext('2d');
+        const stripCanvas = document.createElement('canvas');
+        stripCanvas.width = stripW;
+        stripCanvas.height = totalH;
+        const ctx = stripCanvas.getContext('2d');
 
-        // Background Color (Pure White)
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, stripW, totalH);
 
-        // --- Draw Header (Logo + Text) ---
+        // Header Branding
         ctx.fillStyle = '#111111';
-        
-        // Placeholder Logo Icon (A rounded square with 'B')
         const iconSize = 50;
         const iconX = padding + 20;
         const iconY = 35;
-        
         ctx.save();
         ctx.beginPath();
         ctx.roundRect(iconX, iconY, iconSize, iconSize, 12);
         ctx.fill();
-        
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.font = 'bold 32px Inter';
         ctx.fillText('B', iconX + iconSize/2, iconY + iconSize/2 + 12);
         ctx.restore();
 
-        // Brand Text
         ctx.fillStyle = '#111111';
         ctx.textAlign = 'left';
-        
-        // BestBost - Bold
         ctx.font = '800 24px Inter';
         ctx.fillText('BestBost', iconX + iconSize + 15, iconY + 22);
-        
-        // photobooth - Clean sans
         ctx.font = '400 16px Inter';
         ctx.fillStyle = '#555';
         ctx.fillText('photobooth', iconX + iconSize + 15, iconY + 45);
 
-        // --- Draw Shots ---
+        // Shots
         for (let i = 0; i < shots.length; i++) {
             const yPos = headerH + (i * (shotSize + gap));
             ctx.drawImage(shots[i], padding, yPos, shotSize, shotSize);
         }
 
-        // --- Apply Frame Overlay ---
+        // Apply Frame if selected
         if (selectedFrame !== 'none') {
             const frameImg = new Image();
             frameImg.src = `assets/frames/${selectedFrame}.png`;
-            await new Promise(r => {
-                frameImg.onload = r;
-                frameImg.onerror = r;
-            });
-            
+            await new Promise(r => frameImg.onload = r);
             for (let i = 0; i < shots.length; i++) {
                 const yPos = headerH + (i * (shotSize + gap));
                 ctx.save();
@@ -249,50 +293,74 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // --- Draw QR Code Section ---
+        // QR Code
         const igUser = 'asyrafm08_';
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://www.instagram.com/${igUser}`;
-        
-        try {
-            const qrImg = new Image();
-            qrImg.crossOrigin = 'anonymous';
-            qrImg.src = qrUrl;
-            await new Promise((resolve) => {
-                qrImg.onload = resolve;
-                qrImg.onerror = resolve;
-            });
-            
-            if (qrImg.complete && qrImg.naturalWidth !== 0) {
-                const qrSize = 140; // Large and clear
-                const qrX = (stripW - qrSize) / 2;
-                const qrY = totalH - footerH + 20;
-                
-                // Draw QR
-                ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-                
-                // IG Handle with icon-like styling
-                ctx.fillStyle = '#111111';
-                ctx.font = 'bold 15px Inter';
-                ctx.textAlign = 'center';
-                ctx.fillText(`@${igUser}`, stripW / 2, qrY + qrSize + 30);
-            }
-        } catch (err) {
-            console.error("QR drawing failed:", err);
-        }
+        const qrImg = new Image();
+        qrImg.crossOrigin = 'anonymous';
+        qrImg.src = qrUrl;
+        await new Promise(r => qrImg.onload = r);
+        const qrSize = 140;
+        const qrX = (stripW - qrSize) / 2;
+        const qrY = totalH - footerH + 20;
+        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        ctx.fillStyle = '#111111';
+        ctx.font = 'bold 15px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText(`@${igUser}`, stripW / 2, qrY + qrSize + 30);
 
-        resultImage.src = canvas.toDataURL('image/png');
-        previewModal.classList.add('active');
+        // Show Result
+        const finalUrl = stripCanvas.toDataURL('image/png');
+        showFinalResult(finalUrl);
     }
 
-    // Modal & Download Controls
-    closeBtn.addEventListener('click', () => previewModal.classList.remove('active'));
-    retakeBtn.addEventListener('click', () => previewModal.classList.remove('active'));
-    
-    downloadBtn.addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = `GlowBooth-Strip-${Date.now()}.png`;
-        link.href = resultImage.src;
-        link.click();
+    function showFinalResult(url) {
+        const modalContent = previewModal.querySelector('.modal-content');
+        modalContent.innerHTML = `
+            <button class="close-btn">&times;</button>
+            <h2 style="color: var(--accent-color); margin-bottom: 2rem;">YOUR MASTERPIECE</h2>
+            <div class="result-container">
+                <img src="${url}" alt="Final Strip">
+            </div>
+            <div class="modal-actions">
+                <button id="finalDownloadBtn" class="download-btn">DOWNLOAD PHOTO</button>
+                <button id="backToGalleryBtn" class="secondary-btn">BACK TO GALLERY</button>
+            </div>
+        `;
+
+        document.getElementById('finalDownloadBtn').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `BestBost-Strip-${Date.now()}.png`;
+            link.href = url;
+            link.click();
+        });
+
+        document.getElementById('backToGalleryBtn').addEventListener('click', showSelectionGallery);
+        modalContent.querySelector('.close-btn').addEventListener('click', () => location.reload());
+    }
+
+    function downloadAllPhotos() {
+        sessionCaptures.forEach((src, idx) => {
+            const link = document.createElement('a');
+            link.download = `BestBost-Capture-${idx + 1}.png`;
+            link.href = src;
+            link.click();
+        });
+    }
+
+    // Frame selection handling
+    frameOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            selectedFrame = option.dataset.frame;
+            frameOptions.forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+            if (selectedFrame === 'none') {
+                frameOverlay.style.backgroundImage = 'none';
+            } else {
+                frameOverlay.style.backgroundImage = `url('assets/frames/${selectedFrame}.png')`;
+                frameOverlay.style.mixBlendMode = (selectedFrame === 'floral') ? 'multiply' : 'screen';
+            }
+        });
     });
 
     toggleCameraBtn.addEventListener('click', () => {

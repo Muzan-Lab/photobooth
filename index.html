@@ -12,9 +12,38 @@
 <body>
     <div class="app-container">
         <header>
-            <div class="logo">GLOW<span>BOOTH</span></div>
-            <p class="subtitle">Capture your moment with style</p>
+            <div class="logo">BestBost<span>PHOTOBOOTH</span></div>
+            <div id="sessionTimer" class="session-timer hidden">
+                <span class="timer-label">SESSION TIME</span>
+                <span id="timeLeft" class="timer-value">00:00</span>
+            </div>
         </header>
+
+        <!-- Session Setup Overlay -->
+        <div id="setupScreen" class="setup-overlay">
+            <div class="setup-card">
+                <h2>PHOTOBOX SESSION</h2>
+                <div class="setup-grid">
+                    <div class="setup-group">
+                        <label>Session Duration</label>
+                        <div class="option-row" data-type="session">
+                            <button class="opt-btn active" data-val="10">10m</button>
+                            <button class="opt-btn" data-val="20">20m</button>
+                            <button class="opt-btn" data-val="30">30m</button>
+                        </div>
+                    </div>
+                    <div class="setup-group">
+                        <label>Capture Countdown</label>
+                        <div class="option-row" data-type="capture">
+                            <button class="opt-btn" data-val="3">3s</button>
+                            <button class="opt-btn active" data-val="5">5s</button>
+                            <button class="opt-btn" data-val="10">10s</button>
+                        </div>
+                    </div>
+                </div>
+                <button id="startSessionBtn" class="primary-btn">START SESSION</button>
+            </div>
+        </div>
 
         <main>
             <div class="photobooth-wrapper">
@@ -35,6 +64,14 @@
                         <button id="captureBtn" class="main-capture-btn">
                             <div class="inner-circle"></div>
                         </button>
+                        <button id="finishSessionBtn" class="secondary-btn finish-btn">FINISH</button>
+                    </div>
+
+                    <!-- Photo Gallery Reel -->
+                    <div id="photoGallery" class="photo-gallery">
+                        <div class="gallery-inner" id="galleryInner">
+                            <!-- Thumbnails will be added here -->
+                        </div>
                     </div>
                 </div>
 
