@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlowBooth | Premium Web Photobooth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">GLOW<span>BOOTH</span></div>
+            <p class="subtitle">Capture your moment with style</p>
+        </header>
+
+        <main>
+            <div class="photobooth-wrapper">
+                <div class="camera-container" id="cameraContainer">
+                    <video id="video" autoplay playsinline></video>
+                    <div class="frame-overlay" id="frameOverlay"></div>
+                    <div class="flash-effect" id="flashEffect"></div>
+                    
+                    <!-- New Photobooth Elements -->
+                    <div class="countdown-overlay" id="countdown"></div>
+                    <div class="shots-indicator" id="shotsIndicator">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                    
+                    <div class="camera-ui">
+                        <button id="captureBtn" class="main-capture-btn">
+                            <div class="inner-circle"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="controls-panel">
+                    <section class="mode-selector">
+                        <h3>SESSION MODE</h3>
+                        <div class="mode-options">
+                            <button class="mode-btn active" data-mode="strip">
+                                <div class="mode-icon strip"></div>
+                                <span>Strip (3)</span>
+                            </button>
+                            <button class="mode-btn" data-mode="single">
+                                <div class="mode-icon single"></div>
+                                <span>Single</span>
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="frame-selector">
+                        <h3>SELECT FRAME</h3>
+                        <div class="frames-grid">
+                            <div class="frame-option active" data-frame="none">
+                                <div class="frame-preview empty">None</div>
+                                <span>Natural</span>
+                            </div>
+                            <div class="frame-option" data-frame="retro">
+                                <img src="assets/frames/retro.png" alt="Retro">
+                                <span>Retro</span>
+                            </div>
+                            <div class="frame-option" data-frame="neon">
+                                <img src="assets/frames/neon.png" alt="Neon">
+                                <span>Neon</span>
+                            </div>
+                            <div class="frame-option" data-frame="floral">
+                                <img src="assets/frames/floral.png" alt="Floral">
+                                <span>Floral</span>
+                            </div>
+                            <div class="frame-option" data-frame="minimal">
+                                <img src="assets/frames/minimal.png" alt="Minimal">
+                                <span>Minimal</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="actions">
+                        <button id="toggleCamera" class="secondary-btn">Switch Camera</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Hidden canvas for processing -->
+        <canvas id="canvas" style="display:none;"></canvas>
+
+        <!-- Result Preview Modal -->
+        <div id="previewModal" class="modal">
+            <div class="modal-content">
+                <button class="close-btn">&times;</button>
+                <h2>YOUR MASTERPIECE</h2>
+                <div class="result-container">
+                    <img id="resultImage" src="" alt="Result">
+                </div>
+                <div class="modal-actions">
+                    <button id="downloadBtn" class="download-btn">DOWNLOAD PHOTO</button>
+                    <button id="retakeBtn" class="secondary-btn">RETAKE</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2026 GlowBooth Studio. All rights reserved.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
