@@ -376,6 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('backToGalleryBtn').addEventListener('click', showSelectionGallery);
         document.getElementById('finalModalClose').addEventListener('click', () => location.reload());
+        previewModal.classList.add('active');
     }
 
     function downloadAllPhotos() {
