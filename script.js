@@ -10,16 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const frameOptions = document.querySelectorAll('.frame-option');
     const toggleCameraBtn = document.getElementById('toggleCamera');
     const modeBtns = document.querySelectorAll('.mode-btn');
-    const shotsIndicator = document.getElementById('shotsIndicator');
-    
-    // UI Elements for Photobox System
-    const setupScreen = document.getElementById('setupScreen');
-    const startSessionBtn = document.getElementById('startSessionBtn');
-    const finishSessionBtn = document.getElementById('finishSessionBtn');
-    const sessionTimerEl = document.getElementById('sessionTimer');
-    const timeLeftEl = document.getElementById('timeLeft');
-    const galleryInner = document.getElementById('galleryInner');
-    const optBtns = document.querySelectorAll('.opt-btn');
+    const cameraUI = document.querySelector('.camera-ui');
 
     let currentStream = null;
     let selectedFrame = 'none';
@@ -49,7 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
             video.srcObject = currentStream;
         } catch (err) {
             console.error("Error accessing camera:", err);
-            alert("Could not access camera. Please check permissions.");
+            // Don't show alert if it's just initial load, let user see setup first
+            if (sessionActive) alert("Could not access camera. Please check permissions.");
         }
     }
 
@@ -64,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (sessionMode === 'single') {
                 shotsIndicator.classList.add('hidden');
             } else {
-                shotsIndicator.classList.remove('hidden');
+                if (sessionActive) shotsIndicator.classList.remove('hidden');
             }
         });
     });
@@ -82,7 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     startSessionBtn.addEventListener('click', () => {
-        const selectedDuration = parseInt(document.querySelector('.option-row[data-type="session"] .opt-btn.active').dataset.val);
+        const selectedBtn = document.querySelector('.option-row[data-type="session"] .opt-btn.active');
+        if (!selectedBtn) return;
+        const selectedDuration = parseInt(selectedBtn.dataset.val);
         startSession(selectedDuration);
     });
 
@@ -97,9 +91,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSession(minutes) {
         timeRemaining = minutes * 60;
         sessionActive = true;
-        setupScreen.classList.add('hidden');
+        setupScreen.classList.remove('active');
         sessionTimerEl.classList.remove('hidden');
+        cameraUI.classList.remove('hidden');
         
+        if (sessionMode === 'strip') {
+            shotsIndicator.classList.remove('hidden');
+        }
+
         updateTimerDisplay();
         sessionInterval = setInterval(() => {
             timeRemaining--;
@@ -117,6 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (timeRemaining < 60) {
             timeLeftEl.style.color = '#ff4b2b';
+        } else {
+            timeLeftEl.style.color = ''; // Reset if somehow it goes back up
         }
     }
 
@@ -124,6 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(sessionInterval);
         sessionActive = false;
         isCapturing = false;
+        cameraUI.classList.add('hidden');
+        shotsIndicator.classList.add('hidden');
         showSelectionGallery();
     }
 
@@ -204,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. Selection Gallery (MENU HASIL FOTO)
     function showSelectionGallery() {
-        selectedPhotos = [];
         const modalContent = previewModal.querySelector('.modal-content');
         modalContent.innerHTML = `
             <button class="close-btn" id="modalClose">&times;</button>
@@ -222,11 +224,14 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionCaptures.forEach((src) => {
             const item = document.createElement('div');
             item.className = 'selection-item';
+            // Mark as selected if already in selectedPhotos
+            if (selectedPhotos.includes(src)) item.classList.add('selected');
             item.innerHTML = `<img src="${src}"><div class="check">✓</div>`;
             item.addEventListener('click', () => toggleSelection(item, src));
             grid.appendChild(item);
         });
 
+        updateSelectionUI();
         document.getElementById('downloadAllBtn').addEventListener('click', downloadAllPhotos);
         document.getElementById('downloadSelectedBtn').addEventListener('click', downloadSelectedPhotos);
         document.getElementById('genStripBtn').addEventListener('click', generateStripFromSelected);
@@ -242,16 +247,24 @@ document.addEventListener('DOMContentLoaded', () => {
             item.classList.add('selected');
             selectedPhotos.push(src);
         }
-        
+        updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
         const count = selectedPhotos.length;
-        document.getElementById('genStripBtn').textContent = `GENERATE STRIP (${count}/3)`;
-        document.getElementById('downloadSelectedBtn').textContent = `DOWNLOAD SELECTED (${count})`;
+        const genBtn = document.getElementById('genStripBtn');
+        const downBtn = document.getElementById('downloadSelectedBtn');
+        if (genBtn) genBtn.textContent = `GENERATE STRIP (${count}/3)`;
+        if (downBtn) downBtn.textContent = `DOWNLOAD SELECTED (${count})`;
         
-        // Visual cue: strip only works with 3
-        if (count === 3) {
-            document.getElementById('genStripBtn').style.opacity = '1';
-        } else {
-            document.getElementById('genStripBtn').style.opacity = '0.6';
+        if (genBtn) {
+            if (count === 3) {
+                genBtn.style.opacity = '1';
+                genBtn.disabled = false;
+            } else {
+                genBtn.style.opacity = '0.6';
+                genBtn.disabled = true;
+            }
         }
     }
 
@@ -261,15 +274,28 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const shots = await Promise.all(selectedPhotos.map(src => {
-            return new Promise(resolve => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.src = src;
-            });
-        }));
+        const btn = document.getElementById('genStripBtn');
+        btn.classList.add('processing');
+        btn.textContent = 'GENERATING STRIP...';
+        btn.disabled = true;
 
-        await generateStrip(shots);
+        try {
+            const shots = await Promise.all(selectedPhotos.map(src => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error("Failed to load image"));
+                    img.src = src;
+                });
+            }));
+
+            await generateStrip(shots);
+        } catch (err) {
+            console.error(err);
+            alert("An error occurred during strip generation.");
+            btn.classList.remove('processing');
+            updateSelectionUI();
+        }
     }
 
     async function generateStrip(shots) {
@@ -328,7 +354,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedFrame !== 'none') {
             const frameImg = new Image();
             frameImg.src = `assets/frames/${selectedFrame}.png`;
-            await new Promise(r => frameImg.onload = r);
+            await new Promise((resolve, reject) => {
+                frameImg.onload = resolve;
+                frameImg.onerror = reject;
+            });
             for (let i = 0; i < shots.length; i++) {
                 const yPos = headerH + (i * (shotSize + gap));
                 ctx.save();
@@ -343,7 +372,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const qrImg = new Image();
         qrImg.crossOrigin = 'anonymous';
         qrImg.src = qrUrl;
-        await new Promise(r => qrImg.onload = r);
+        await new Promise((resolve, reject) => {
+            qrImg.onload = resolve;
+            qrImg.onerror = reject;
+        });
         const qrSize = 140;
         const qrX = (stripW - qrSize) / 2;
         const qrY = totalH - footerH + 20;
@@ -385,10 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function downloadAllPhotos() {
         if (sessionCaptures.length === 0) return;
         sessionCaptures.forEach((src, idx) => {
-            const link = document.createElement('a');
-            link.download = `BestBost-Capture-${idx + 1}.png`;
-            link.href = src;
-            link.click();
+            downloadWithFrame(src, `BestBost-Capture-${idx + 1}.png`);
         });
     }
 
@@ -398,12 +427,58 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         selectedPhotos.forEach((src, idx) => {
-            const link = document.createElement('a');
-            link.download = `BestBost-Selected-${idx + 1}.png`;
-            link.href = src;
-            link.click();
+            downloadWithFrame(src, `BestBost-Selected-${idx + 1}.png`);
         });
     }
+
+    async function downloadWithFrame(src, filename) {
+        const img = new Image();
+        img.src = src;
+        await new Promise(r => img.onload = r);
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 1080;
+        tempCanvas.height = 1080;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        if (selectedFrame !== 'none') {
+            const frameImg = new Image();
+            frameImg.src = `assets/frames/${selectedFrame}.png`;
+            await new Promise(r => frameImg.onload = r);
+            ctx.save();
+            ctx.globalCompositeOperation = (selectedFrame === 'floral') ? 'multiply' : 'screen';
+            ctx.drawImage(frameImg, 0, 0, 1080, 1080);
+            ctx.restore();
+        }
+
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = tempCanvas.toDataURL('image/png');
+        link.click();
+    }
+
+    frameOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            selectedFrame = option.dataset.frame;
+            frameOptions.forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+            if (selectedFrame === 'none') {
+                frameOverlay.style.backgroundImage = 'none';
+            } else {
+                frameOverlay.style.backgroundImage = `url('assets/frames/${selectedFrame}.png')`;
+                frameOverlay.style.mixBlendMode = (selectedFrame === 'floral') ? 'multiply' : 'screen';
+            }
+        });
+    });
+
+    toggleCameraBtn.addEventListener('click', () => {
+        facingMode = facingMode === 'user' ? 'environment' : 'user';
+        startCamera();
+    });
+
+    startCamera();
+});
 
     frameOptions.forEach(option => {
         option.addEventListener('click', () => {

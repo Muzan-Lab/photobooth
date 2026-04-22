@@ -319,8 +319,16 @@ main {
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.95);
     z-index: 200;
-    display: flex; align-items: center; justify-content: center;
+    display: none; /* Changed from display: flex to none */
+    align-items: center; justify-content: center;
     backdrop-filter: blur(20px);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.setup-overlay.active, .modal.active { 
+    display: flex; 
+    opacity: 1;
 }
 
 .hidden { display: none !important; }
@@ -336,6 +344,12 @@ main {
     max-height: 90vh;
     display: flex;
     flex-direction: column;
+    transform: translateY(20px);
+    transition: transform 0.4s ease;
+}
+
+.setup-overlay.active .setup-card, .modal.active .modal-content {
+    transform: translateY(0);
 }
 
 .setup-card h2, .modal-content h2 {
@@ -379,8 +393,9 @@ main {
 .opt-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 1rem; border-radius: 12px; cursor: pointer; transition: var(--transition); }
 .opt-btn:hover { background: rgba(255, 255, 255, 0.1); }
 .opt-btn.active { background: var(--accent-color); color: #000; border-color: var(--accent-color); }
-.primary-btn, .download-btn { width: 100%; padding: 1.2rem; border-radius: 15px; border: none; background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary)); color: #fff; font-weight: 800; cursor: pointer; transition: var(--transition); }
+.primary-btn, .download-btn { width: 100%; padding: 1.2rem; border-radius: 15px; border: none; background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary)); color: #fff; font-weight: 800; cursor: pointer; transition: var(--transition); position: relative; overflow: hidden; }
 .primary-btn:hover { transform: translateY(-3px); }
+.primary-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 /* Selection Gallery */
 .selection-grid {
@@ -388,24 +403,41 @@ main {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 0.8rem;
     margin-bottom: 1.5rem;
+    overflow-y: auto;
+    padding-right: 5px;
 }
 
-.selection-item { position: relative; aspect-ratio: 1/1; border-radius: 10px; overflow: hidden; border: 3px solid transparent; cursor: pointer; }
-.selection-item.selected { border-color: var(--accent-color); }
+.selection-item { position: relative; aspect-ratio: 1/1; border-radius: 10px; overflow: hidden; border: 3px solid transparent; cursor: pointer; transition: var(--transition); }
+.selection-item.selected { border-color: var(--accent-color); transform: scale(0.95); }
 .selection-item img { width: 100%; height: 100%; object-fit: cover; }
 .selection-item .check { position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; background: var(--accent-color); border-radius: 50%; display: none; align-items: center; justify-content: center; color: #000; font-size: 10px; }
 .selection-item.selected .check { display: flex; }
 
 .finish-btn {
-    position: absolute;
-    top: -50px; right: 0;
-    padding: 0.4rem 0.8rem !important;
+    padding: 0.6rem 1.2rem !important;
     font-size: 0.7rem !important;
     color: #ff4b2b !important;
     background: rgba(255, 75, 43, 0.1) !important;
     border: 1px solid rgba(255, 75, 43, 0.3) !important;
     border-radius: 50px;
-    cursor: pointer;
+}
+
+.finish-btn:hover {
+    background: rgba(255, 75, 43, 0.2) !important;
+}
+
+/* Processing Pulse */
+.processing::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+    100% { left: 100%; }
 }
 
 /* Responsive Overrides */
@@ -426,10 +458,10 @@ main {
 
 @media (max-width: 600px) {
     .app-container { padding: 1rem; }
-    .camera-ui { bottom: 1rem; }
-    .main-capture-btn { width: 60px; height: 60px; }
+    .camera-ui { bottom: 1rem; flex-direction: column; width: 100%; }
+    .main-capture-btn { width: 60px; height: 60px; order: 1; }
     .inner-circle { width: 44px; height: 44px; }
-    .finish-btn { top: -45px; }
+    .finish-btn { order: 2; margin-top: 1rem; width: 100px; }
     .logo { text-align: center; width: 100%; }
     .session-timer { margin: 0 auto; }
 }
