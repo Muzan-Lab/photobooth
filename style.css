@@ -75,12 +75,14 @@ main {
 .camera-container {
     position: relative;
     flex: 1.5;
-    min-width: 320px;
+    width: 100%;
+    max-width: min(100%, 75vh); /* Limit height to 75% of viewport to keep controls visible */
     aspect-ratio: 1/1;
     background: #000;
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    margin: 0 auto;
 }
 
 #video {
@@ -205,10 +207,11 @@ main {
     flex-direction: column;
     gap: 1.5rem;
     background: var(--card-bg);
-    padding: 1.5rem;
+    padding: clamp(1rem, 3vw, 1.5rem);
     border-radius: var(--border-radius);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    min-width: 280px;
+    width: 100%;
+    max-width: 450px;
 }
 
 .mode-selector h3, .frame-selector h3 {
@@ -246,8 +249,9 @@ main {
 
 .frames-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
     gap: 0.8rem;
+    transition: var(--transition);
 }
 
 .frame-option {
@@ -481,12 +485,41 @@ main {
 }
 
 @media (max-width: 600px) {
-    .app-container { padding: 1rem; }
+    .app-container { padding: 0.8rem; gap: 1rem; }
     .camera-ui { bottom: 2rem; padding: 0; }
     .main-capture-btn { width: 70px; height: 70px; }
     .inner-circle { width: 50px; height: 50px; }
-    .logo { text-align: left; width: auto; }
+    .logo { text-align: left; width: auto; font-size: 1.8rem; }
     .session-timer { margin: 0; }
     .photo-gallery { top: auto; bottom: 8rem; right: 1rem; width: auto; height: auto; display: flex; }
     .gallery-inner { flex-direction: row; max-width: calc(100vw - 2rem); }
+    
+    .camera-container {
+        max-width: 100%;
+    }
+
+    .frames-grid {
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        gap: 1rem;
+        scrollbar-width: none; /* Hide scrollbar for clean look */
+    }
+    
+    .frames-grid::-webkit-scrollbar { display: none; }
+    
+    .frame-option {
+        min-width: 80px;
+        flex-shrink: 0;
+    }
+
+    .controls-panel {
+        max-width: 100%;
+        padding: 1.2rem;
+    }
+    
+    .opt-btn {
+        padding: 0.8rem 0.5rem;
+        font-size: 0.8rem;
+    }
 }
