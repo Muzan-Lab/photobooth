@@ -11,6 +11,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleCameraBtn = document.getElementById('toggleCamera');
     const modeBtns = document.querySelectorAll('.mode-btn');
     const cameraUI = document.querySelector('.camera-ui');
+    const shotsIndicator = document.getElementById('shotsIndicator');
+    const setupScreen = document.getElementById('setupScreen');
+    const startSessionBtn = document.getElementById('startSessionBtn');
+    const finishSessionBtn = document.getElementById('finishSessionBtn');
+    const sessionTimerEl = document.getElementById('sessionTimer');
+    const timeLeftEl = document.getElementById('timeLeft');
+    const galleryInner = document.getElementById('galleryInner');
+    const optBtns = document.querySelectorAll('.opt-btn');
+    const dots = document.querySelectorAll('.dot');
 
     let currentStream = null;
     let selectedFrame = 'none';
@@ -457,28 +466,6 @@ document.addEventListener('DOMContentLoaded', () => {
         link.href = tempCanvas.toDataURL('image/png');
         link.click();
     }
-
-    frameOptions.forEach(option => {
-        option.addEventListener('click', () => {
-            selectedFrame = option.dataset.frame;
-            frameOptions.forEach(opt => opt.classList.remove('active'));
-            option.classList.add('active');
-            if (selectedFrame === 'none') {
-                frameOverlay.style.backgroundImage = 'none';
-            } else {
-                frameOverlay.style.backgroundImage = `url('assets/frames/${selectedFrame}.png')`;
-                frameOverlay.style.mixBlendMode = (selectedFrame === 'floral') ? 'multiply' : 'screen';
-            }
-        });
-    });
-
-    toggleCameraBtn.addEventListener('click', () => {
-        facingMode = facingMode === 'user' ? 'environment' : 'user';
-        startCamera();
-    });
-
-    startCamera();
-});
 
     frameOptions.forEach(option => {
         option.addEventListener('click', () => {
