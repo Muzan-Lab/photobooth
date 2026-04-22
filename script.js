@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isCapturing || !sessionActive) return;
             isCapturing = true;
             captureBtn.disabled = true;
+            if (finishSessionBtn) finishSessionBtn.disabled = true;
 
             try {
                 if (sessionMode === 'strip') {
@@ -184,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } finally {
                 isCapturing = false;
                 captureBtn.disabled = false;
+                if (finishSessionBtn) finishSessionBtn.disabled = false;
             }
         });
     }
@@ -323,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedFrame !== 'none') {
                 var frameImg = new Image();
                 frameImg.src = 'assets/frames/' + selectedFrame + '.png';
-                await new Promise(function(r) { frameImg.onload = r; });
+                await new Promise(function(r) { frameImg.onload = r; frameImg.onerror = r; });
                 ctx.save();
                 ctx.globalCompositeOperation = (selectedFrame === 'floral') ? 'multiply' : 'screen';
                 ctx.drawImage(frameImg, padding, yPos, shotSize, shotSize);
@@ -334,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var igUser = 'asyrafm08_';
         var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://www.instagram.com/' + igUser;
         var qrImg = new Image(); qrImg.crossOrigin = 'anonymous'; qrImg.src = qrUrl;
-        await new Promise(function(r) { qrImg.onload = r; });
+        await new Promise(function(r) { qrImg.onload = r; qrImg.onerror = r; });
         var qrSize = 140, qrX = (stripW - qrSize) / 2, qrY = totalH - footerH + 20;
         ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
         ctx.fillStyle = '#111111'; ctx.font = 'bold 15px Inter'; ctx.textAlign = 'center';
@@ -374,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function downloadWithFrame(src, filename) {
         var img = new Image(); img.src = src;
-        await new Promise(function(r) { img.onload = r; });
+        await new Promise(function(r) { img.onload = r; img.onerror = r; });
         var tempCanvas = document.createElement('canvas');
         tempCanvas.width = 1080; tempCanvas.height = 1080;
         var ctx = tempCanvas.getContext('2d');
@@ -382,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selectedFrame !== 'none') {
             var frameImg = new Image();
             frameImg.src = 'assets/frames/' + selectedFrame + '.png';
-            await new Promise(function(r) { frameImg.onload = r; });
+            await new Promise(function(r) { frameImg.onload = r; frameImg.onerror = r; });
             ctx.save();
             ctx.globalCompositeOperation = (selectedFrame === 'floral') ? 'multiply' : 'screen';
             ctx.drawImage(frameImg, 0, 0, 1080, 1080);
