@@ -19,31 +19,6 @@
             </div>
         </header>
 
-        <!-- Session Setup Overlay -->
-        <div id="setupScreen" class="setup-overlay active">
-            <div class="setup-card">
-                <h2>PHOTOBOX SESSION</h2>
-                <div class="setup-grid">
-                    <div class="setup-group">
-                        <label>Session Duration</label>
-                        <div class="option-row" data-type="session">
-                            <button class="opt-btn active" data-val="10">10m</button>
-                            <button class="opt-btn" data-val="20">20m</button>
-                            <button class="opt-btn" data-val="30">30m</button>
-                        </div>
-                    </div>
-                    <div class="setup-group">
-                        <label>Capture Countdown</label>
-                        <div class="option-row" data-type="capture">
-                            <button class="opt-btn" data-val="3">3s</button>
-                            <button class="opt-btn active" data-val="5">5s</button>
-                            <button class="opt-btn" data-val="10">10s</button>
-                        </div>
-                    </div>
-                </div>
-                <button id="startSessionBtn" class="primary-btn">START SESSION</button>
-            </div>
-        </div>
 
         <main>
             <div class="photobooth-wrapper">
@@ -126,16 +101,42 @@
         <!-- Hidden canvas for processing -->
         <canvas id="canvas" style="display:none;"></canvas>
 
-        <!-- Result Preview Modal (Content injected dynamically) -->
-        <div id="previewModal" class="modal">
-            <div class="modal-content">
-                <!-- Initialized and populated via script.js -->
-            </div>
-        </div>
-
         <footer>
             <p>&copy; 2026 GlowBooth Studio. All rights reserved.</p>
         </footer>
+    </div>
+
+    <!-- Session Setup Overlay -->
+    <div id="setupScreen" class="setup-overlay active">
+        <div class="setup-card">
+            <h2>PHOTOBOX SESSION</h2>
+            <div class="setup-grid">
+                <div class="setup-group">
+                    <label>Session Duration</label>
+                    <div class="option-row" data-type="session">
+                        <button class="opt-btn active" data-val="10">10m</button>
+                        <button class="opt-btn" data-val="20">20m</button>
+                        <button class="opt-btn" data-val="30">30m</button>
+                    </div>
+                </div>
+                <div class="setup-group">
+                    <label>Capture Countdown</label>
+                    <div class="option-row" data-type="capture">
+                        <button class="opt-btn" data-val="3">3s</button>
+                        <button class="opt-btn active" data-val="5">5s</button>
+                        <button class="opt-btn" data-val="10">10s</button>
+                    </div>
+                </div>
+            </div>
+            <button id="startSessionBtn" class="primary-btn">START SESSION</button>
+        </div>
+    </div>
+
+    <!-- Result Preview Modal (Content injected dynamically) -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <!-- Initialized and populated via script.js -->
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
