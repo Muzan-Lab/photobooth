@@ -152,34 +152,39 @@ document.addEventListener('DOMContentLoaded', function() {
             isCapturing = true;
             captureBtn.disabled = true;
 
-            if (sessionMode === 'strip') {
-                sessionDots.forEach(function(dot) { dot.classList.remove('active'); });
-                for (var i = 0; i < 3; i++) {
+            try {
+                if (sessionMode === 'strip') {
+                    sessionDots.forEach(function(dot) { dot.classList.remove('active'); });
+                    for (var i = 0; i < 3; i++) {
+                        await runCountdown(captureTimer);
+                        var shot = captureSingleFrame();
+                        var dataUrl = shot.toDataURL('image/png');
+                        sessionCaptures.push(dataUrl);
+                        updateGalleryUI(dataUrl);
+                        if (sessionDots[i]) sessionDots[i].classList.add('active');
+                        if (flashEffect) {
+                            flashEffect.classList.add('active');
+                            setTimeout(function() { flashEffect.classList.remove('active'); }, 500);
+                        }
+                        await sleep(800); // Slightly faster wait (800ms vs 1000ms)
+                    }
+                } else {
                     await runCountdown(captureTimer);
                     var shot = captureSingleFrame();
                     var dataUrl = shot.toDataURL('image/png');
                     sessionCaptures.push(dataUrl);
                     updateGalleryUI(dataUrl);
-                    if (sessionDots[i]) sessionDots[i].classList.add('active');
                     if (flashEffect) {
                         flashEffect.classList.add('active');
                         setTimeout(function() { flashEffect.classList.remove('active'); }, 500);
                     }
-                    await sleep(1000);
                 }
-            } else {
-                await runCountdown(captureTimer);
-                var shot = captureSingleFrame();
-                var dataUrl = shot.toDataURL('image/png');
-                sessionCaptures.push(dataUrl);
-                updateGalleryUI(dataUrl);
-                if (flashEffect) {
-                    flashEffect.classList.add('active');
-                    setTimeout(function() { flashEffect.classList.remove('active'); }, 500);
-                }
+            } catch (err) {
+                console.error("Capture Error:", err);
+            } finally {
+                isCapturing = false;
+                captureBtn.disabled = false;
             }
-            isCapturing = false;
-            captureBtn.disabled = false;
         });
     }
 

@@ -105,7 +105,7 @@ main {
     top: 0; left: 0; width: 100%; height: 100%;
     background: white;
     opacity: 0;
-    z-index: 20;
+    z-index: 100; /* Increased to cover everything */
     pointer-events: none;
 }
 
@@ -120,11 +120,11 @@ main {
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    font-size: clamp(8rem, 20vw, 15rem);
+    font-size: clamp(6rem, 15vw, 12rem); /* Slightly smaller for mobile safety */
     font-weight: 900;
     color: #fff;
     text-shadow: 0 0 30px rgba(0, 242, 255, 0.8);
-    z-index: 30;
+    z-index: 90; /* Just below flash */
     pointer-events: none;
     opacity: 0;
 }
@@ -135,16 +135,16 @@ main {
 }
 
 @keyframes pulse-countdown {
-    0% { transform: translate(-50%, -50%) scale(0.8); }
-    50% { transform: translate(-50%, -50%) scale(1.1); }
-    100% { transform: translate(-50%, -50%) scale(1); }
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.5; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
 }
 
 .shots-indicator {
     position: absolute;
     top: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 1.5rem; /* Moved to corner to avoid being centered over countdown */
+    transform: none;
     display: flex;
     gap: 0.6rem;
     z-index: 10;
@@ -169,28 +169,31 @@ main {
 .camera-ui {
     position: absolute;
     bottom: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
+    left: 0;
+    width: 100%;
+    padding: 0 1.5rem;
+    z-index: 15;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 1.5rem;
 }
 
 .main-capture-btn {
-    width: 70px; height: 70px;
+    width: 75px; height: 75px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.2);
     border: 4px solid #fff;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: var(--transition);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
 .main-capture-btn:active { transform: scale(0.9); }
 
 .inner-circle {
-    width: 50px; height: 50px;
+    width: 55px; height: 55px;
     border-radius: 50%;
     background: #fff;
 }
@@ -286,29 +289,41 @@ main {
 /* Gallery Reel */
 .photo-gallery {
     position: absolute;
-    bottom: 1rem;
-    left: 0;
-    width: 100%;
-    padding: 0 1rem;
-    z-index: 15;
+    top: 5rem; /* Moved higher to avoid buttons */
+    right: 1.5rem;
+    width: 80px; 
+    height: calc(100% - 10rem);
+    z-index: 5;
     pointer-events: none;
 }
 
 .gallery-inner {
     display: flex;
+    flex-direction: column; /* Vertical reel to save bottom space */
     gap: 0.8rem;
-    overflow-x: auto;
+    overflow-y: auto;
     padding: 0.5rem;
     pointer-events: auto;
     scrollbar-width: none;
+    max-height: 100%;
 }
 
+.gallery-inner::-webkit-scrollbar { display: none; }
+
 .gallery-item {
-    min-width: 60px; height: 60px;
-    border-radius: 8px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    width: 60px; height: 60px;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     overflow: hidden;
     flex-shrink: 0;
+    background: #000;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
 
 .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
@@ -409,25 +424,30 @@ main {
     margin-bottom: 1.5rem;
     overflow-y: auto;
     padding-right: 5px;
+    max-height: 50vh;
 }
 
 .selection-item { position: relative; aspect-ratio: 1/1; border-radius: 10px; overflow: hidden; border: 3px solid transparent; cursor: pointer; transition: var(--transition); }
 .selection-item.selected { border-color: var(--accent-color); transform: scale(0.95); }
 .selection-item img { width: 100%; height: 100%; object-fit: cover; }
-.selection-item .check { position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; background: var(--accent-color); border-radius: 50%; display: none; align-items: center; justify-content: center; color: #000; font-size: 10px; }
+.selection-item .check { position: absolute; top: 5px; right: 5px; width: 22px; height: 22px; background: var(--accent-color); border-radius: 50%; display: none; align-items: center; justify-content: center; color: #000; font-weight: bold; font-size: 12px; }
 .selection-item.selected .check { display: flex; }
 
 .finish-btn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
     padding: 0.6rem 1.2rem !important;
-    font-size: 0.7rem !important;
+    font-size: 0.75rem !important;
     color: #ff4b2b !important;
-    background: rgba(255, 75, 43, 0.1) !important;
+    background: rgba(255, 75, 43, 0.15) !important;
     border: 1px solid rgba(255, 75, 43, 0.3) !important;
     border-radius: 50px;
+    z-index: 20;
 }
 
 .finish-btn:hover {
-    background: rgba(255, 75, 43, 0.2) !important;
+    background: rgba(255, 75, 43, 0.25) !important;
 }
 
 /* Processing Pulse */
@@ -462,10 +482,11 @@ main {
 
 @media (max-width: 600px) {
     .app-container { padding: 1rem; }
-    .camera-ui { bottom: 1rem; flex-direction: column; width: 100%; }
-    .main-capture-btn { width: 60px; height: 60px; order: 1; }
-    .inner-circle { width: 44px; height: 44px; }
-    .finish-btn { order: 2; margin-top: 1rem; width: 100px; }
-    .logo { text-align: center; width: 100%; }
-    .session-timer { margin: 0 auto; }
+    .camera-ui { bottom: 2rem; padding: 0; }
+    .main-capture-btn { width: 70px; height: 70px; }
+    .inner-circle { width: 50px; height: 50px; }
+    .logo { text-align: left; width: auto; }
+    .session-timer { margin: 0; }
+    .photo-gallery { top: auto; bottom: 8rem; right: 1rem; width: auto; height: auto; display: flex; }
+    .gallery-inner { flex-direction: row; max-width: calc(100vw - 2rem); }
 }
