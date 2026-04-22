@@ -533,6 +533,38 @@ main {
     background: rgba(255, 75, 43, 0.25) !important;
 }
 
+/* Final Strip Result Container */
+.result-container {
+    width: 100%;
+    max-height: 50vh;
+    overflow-y: auto;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.3);
+    padding: 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) transparent;
+}
+
+.result-container::-webkit-scrollbar {
+    width: 8px;
+}
+.result-container::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 10px;
+}
+.result-container img {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    border-radius: 5px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+
+
 /* Processing Pulse */
 .processing::after {
     content: '';
